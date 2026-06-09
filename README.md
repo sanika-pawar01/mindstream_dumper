@@ -1,3 +1,5 @@
+# 🧠 MindStream
+[**🚀 Live Demo**](https://mindstream-dumper.onrender.com)
 # 🧠 MindStream — Full-Stack Stream of Consciousness Organizer
 
 An intuitive, distraction-free full-stack web application designed to help users offload unstructured, chaotic thoughts and instantly organize them into actionable tasks and categorized notes. 
