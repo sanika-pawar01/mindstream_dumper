@@ -1,20 +1,33 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 import os
+import json
+from sqlmodel import Session, select
 
-# 1. Load the hidden secrets from your local .env file
+# Database imports
+from database import create_db_and_tables, get_session
+from models import MindDump
+
 load_dotenv()
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
+
+# Mount static files
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 app.mount("/static", StaticFiles(directory=CURRENT_DIR), name="static")
 
-# Define the exact JSON structure we want the AI to return
+# Models
 class SortedBrainDump(BaseModel):
     tasks: list[str] = Field(description="Actionable things the user needs to do/complete.")
     notes: list[str] = Field(description="Creative ideas, thoughts, references, or general diary entries that aren't strict tasks.")
@@ -22,20 +35,23 @@ class SortedBrainDump(BaseModel):
 class DumpRequest(BaseModel):
     text: str
 
-# 2. Safely initialize the Gemini client using the hidden key
+# Gemini Client
 API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
+# --- Routes ---
+
 @app.get("/", response_class=HTMLResponse)
-async def read_index():
+async def read_index(request: Request):
+    # If index.html is in the templates folder, use templates.TemplateResponse
+    # Otherwise, this keeps your file-reading approach:
     index_path = os.path.join(CURRENT_DIR, "index.html")
     with open(index_path, "r", encoding="utf-8") as f:
-        return f.read()
+        return HTMLResponse(content=f.read())
 
 @app.post("/dump")
-async def process_dump(request: DumpRequest):
+async def process_dump(request: DumpRequest, session: Session = Depends(get_session)):
     try:
-        # Call Gemini and force it to fill out our Pydantic data structure
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=f"Analyze this chaotic ADHD brain dump and sort it neatly: {request.text}",
@@ -46,8 +62,30 @@ async def process_dump(request: DumpRequest):
             ),
         )
         
-        import json
-        return json.loads(response.text)
+        result_data = json.loads(response.text)
+        
+        # Save to Database
+        new_dump = MindDump(
+            content=request.text, 
+            tasks=", ".join(result_data["tasks"]), 
+            notes=", ".join(result_data["notes"])
+        )
+        session.add(new_dump)
+        session.commit()
+        
+        return result_data
         
     except Exception as e:
         return {"error": str(e), "tasks": [], "notes": ["An error occurred while calling the AI engine."]}
+
+@app.get("/history", response_class=HTMLResponse)
+async def get_history(request: Request, session: Session = Depends(get_session)):
+    # Fetch all dumps
+    dumps = session.exec(select(MindDump)).all()
+    
+    # FIX: Use the 'context' parameter instead of the second positional argument
+    return templates.TemplateResponse(
+        request=request, 
+        name="history.html", 
+        context={"dumps": dumps}
+    )

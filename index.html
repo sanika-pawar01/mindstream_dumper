@@ -5,8 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Brain Dump & Sort</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .history-btn {
+            background-color: #333; 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 20px; 
+            text-decoration: none; 
+            font-weight: bold;
+            transition: background 0.3s;
+            display: inline-block;
+        }
+        .history-btn:hover { background-color: #555; }
+    </style>
 </head>
 <body>
+
+    <div style="text-align: right; padding: 20px;">
+        <a href="/history" class="history-btn">View History Archive</a>
+    </div>
 
     <div class="app-container">
         <h1>Clear Your Mind.</h1>
@@ -18,17 +35,14 @@
 
         <div id="resultContainer" class="hidden">
             <div class="output-sections">
-                
                 <div class="column">
                     <h3>📝 My Tasks</h3>
                     <div id="tasksList"></div>
                 </div>
-                
                 <div class="column">
                     <h3>💡 Brain Notes</h3>
                     <div id="notesList"></div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -38,7 +52,6 @@
             const textInput = document.getElementById('mindDumpInput').value;
             if (!textInput.trim()) return alert("Type something first!");
 
-            // Visual loading state feedback
             const button = document.getElementById('dumpBtn');
             button.innerText = "Sorting your brain...";
             button.disabled = true;
@@ -51,34 +64,24 @@
                 });
 
                 const data = await response.json();
-                
-                // Clear the input instantly to relieve cognitive load
                 document.getElementById('mindDumpInput').value = '';
                 
-                // Get the list container elements
                 const tasksList = document.getElementById('tasksList');
                 const notesList = document.getElementById('notesList');
-                
-                // Clear out past entries
                 tasksList.innerHTML = '';
                 notesList.innerHTML = '';
 
-                // Build interactive Checkboxes for Tasks
                 if(data.tasks && data.tasks.length > 0) {
                     data.tasks.forEach(task => {
                         const taskItem = document.createElement('div');
                         taskItem.className = 'task-item';
-                        taskItem.innerHTML = `
-                            <input type="checkbox" id="${task}" onclick="this.parentElement.classList.toggle('completed')">
-                            <label for="${task}">${task}</label>
-                        `;
+                        taskItem.innerHTML = `<input type="checkbox"> <label>${task}</label>`;
                         tasksList.appendChild(taskItem);
                     });
                 } else {
                     tasksList.innerHTML = '<p class="empty-text">No urgent tasks detected!</p>';
                 }
 
-                // Build Cards for Notes
                 if(data.notes && data.notes.length > 0) {
                     data.notes.forEach(note => {
                         const noteCard = document.createElement('div');
@@ -90,13 +93,11 @@
                     notesList.innerHTML = '<p class="empty-text">No scattered notes found.</p>';
                 }
 
-                // Reveal the dashboard
                 document.getElementById('resultContainer').classList.remove('hidden');
 
             } catch (error) {
-                alert("Something went wrong processing your request.");
+                alert("Something went wrong.");
             } finally {
-                // Reset button state
                 button.innerText = "Clear Screen & Sort";
                 button.disabled = false;
             }
