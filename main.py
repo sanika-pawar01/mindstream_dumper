@@ -53,7 +53,7 @@ async def read_index(request: Request):
 async def process_dump(request: DumpRequest, session: Session = Depends(get_session)):
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.5-flash',
             contents=f"Analyze this chaotic ADHD brain dump and sort it neatly: {request.text}",
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
