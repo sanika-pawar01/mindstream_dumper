@@ -34,3 +34,12 @@ Built with a high-performance **FastAPI** backend, **Asynchronous JavaScript**, 
 3. The Python backend invokes the Gemini API, passing a custom system instruction along with a strict **Pydantic data validation model** (`SortedBrainDump`).
 4. Gemini extracts the core components of the text and formats them flawlessly into `tasks` and `notes` keys.
 5. The frontend reads the returned JSON data and dynamically renders clean, interactive checkboxes and stylized note cards.
+
+🌟 Recent Updates & Features
+Enhanced UI/UX: Revamped the History page with a modern, responsive design and better task/note visualization.
+
+Smart Categorization: Integrated Google Gemini to intelligently parse unstructured "brain dumps" into organized Actionable Tasks and Notes.
+
+Persistent Storage: Added database integration so your history stays saved even after the session ends.
+
+Live Deployment: The application is now fully hosted and live on the web.
