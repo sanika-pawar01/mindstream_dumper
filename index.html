@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Dump & Sort</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <h1>Clear Your Mind.</h1>
+        <p class="subtitle">Dump all your chaotic thoughts, ideas, and tasks below. We'll sort them out.</p>
+        
+        <textarea id="mindDumpInput" placeholder="Type absolutely everything on your mind right now..."></textarea>
+        
+        <button id="dumpBtn" onclick="submitDump()">Clear Screen & Sort</button>
+
+        <div id="resultContainer" class="hidden">
+            <div class="output-sections">
+                
+                <div class="column">
+                    <h3>📝 My Tasks</h3>
+                    <div id="tasksList"></div>
+                </div>
+                
+                <div class="column">
+                    <h3>💡 Brain Notes</h3>
+                    <div id="notesList"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function submitDump() {
+            const textInput = document.getElementById('mindDumpInput').value;
+            if (!textInput.trim()) return alert("Type something first!");
+
+            // Visual loading state feedback
+            const button = document.getElementById('dumpBtn');
+            button.innerText = "Sorting your brain...";
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/dump', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: textInput })
+                });
+
+                const data = await response.json();
+                
+                // Clear the input instantly to relieve cognitive load
+                document.getElementById('mindDumpInput').value = '';
+                
+                // Get the list container elements
+                const tasksList = document.getElementById('tasksList');
+                const notesList = document.getElementById('notesList');
+                
+                // Clear out past entries
+                tasksList.innerHTML = '';
+                notesList.innerHTML = '';
+
+                // Build interactive Checkboxes for Tasks
+                if(data.tasks && data.tasks.length > 0) {
+                    data.tasks.forEach(task => {
+                        const taskItem = document.createElement('div');
+                        taskItem.className = 'task-item';
+                        taskItem.innerHTML = `
+                            <input type="checkbox" id="${task}" onclick="this.parentElement.classList.toggle('completed')">
+                            <label for="${task}">${task}</label>
+                        `;
+                        tasksList.appendChild(taskItem);
+                    });
+                } else {
+                    tasksList.innerHTML = '<p class="empty-text">No urgent tasks detected!</p>';
+                }
+
+                // Build Cards for Notes
+                if(data.notes && data.notes.length > 0) {
+                    data.notes.forEach(note => {
+                        const noteCard = document.createElement('div');
+                        noteCard.className = 'note-card';
+                        noteCard.innerText = note;
+                        notesList.appendChild(noteCard);
+                    });
+                } else {
+                    notesList.innerHTML = '<p class="empty-text">No scattered notes found.</p>';
+                }
+
+                // Reveal the dashboard
+                document.getElementById('resultContainer').classList.remove('hidden');
+
+            } catch (error) {
+                alert("Something went wrong processing your request.");
+            } finally {
+                // Reset button state
+                button.innerText = "Clear Screen & Sort";
+                button.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
