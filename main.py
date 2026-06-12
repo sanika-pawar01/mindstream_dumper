@@ -56,10 +56,11 @@ async def read_index(request: Request):
 async def process_dump(request: DumpRequest, session: Session = Depends(get_session)):
     try:
         if not API_KEY:
-            raise ValueError("API Key is missing. Please check Render environment variables.")
+            raise ValueError("API Key is missing. Check Render environment variables.")
 
+        # UPDATED: Using a current, stable model identifier
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash',
             contents=f"Analyze this chaotic ADHD brain dump and sort it neatly: {request.text}",
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -82,12 +83,10 @@ async def process_dump(request: DumpRequest, session: Session = Depends(get_sess
         return result_data
         
     except Exception as e:
-        # Print full error to logs for debugging
         print("DEBUG ERROR:", traceback.format_exc())
-        # Return error to UI for immediate feedback
         return {
             "tasks": [], 
-            "notes": [f"Error: {str(e)} - Check Render Logs for details."]
+            "notes": [f"Error: {str(e)} - The model might be unavailable or the API key is invalid."]
         }
 
 @app.get("/history", response_class=HTMLResponse)
