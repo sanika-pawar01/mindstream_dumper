@@ -8,6 +8,7 @@ from google.genai import types
 from dotenv import load_dotenv
 import os
 import json
+import traceback
 from sqlmodel import Session, select
 
 # Database imports
@@ -35,16 +36,18 @@ class SortedBrainDump(BaseModel):
 class DumpRequest(BaseModel):
     text: str
 
-# Gemini Client
+# Gemini Client Setup
 API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    print("CRITICAL: GEMINI_API_KEY is not set in environment variables.")
+
 client = genai.Client(api_key=API_KEY)
 
 # --- Routes ---
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
-    # If index.html is in the templates folder, use templates.TemplateResponse
-    # Otherwise, this keeps your file-reading approach:
     index_path = os.path.join(CURRENT_DIR, "index.html")
     with open(index_path, "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
@@ -52,6 +55,9 @@ async def read_index(request: Request):
 @app.post("/dump")
 async def process_dump(request: DumpRequest, session: Session = Depends(get_session)):
     try:
+        if not API_KEY:
+            raise ValueError("API Key is missing. Please check Render environment variables.")
+
         response = client.models.generate_content(
             model='gemini-1.5-flash',
             contents=f"Analyze this chaotic ADHD brain dump and sort it neatly: {request.text}",
@@ -76,14 +82,17 @@ async def process_dump(request: DumpRequest, session: Session = Depends(get_sess
         return result_data
         
     except Exception as e:
-        return {"error": str(e), "tasks": [], "notes": ["An error occurred while calling the AI engine."]}
+        # Print full error to logs for debugging
+        print("DEBUG ERROR:", traceback.format_exc())
+        # Return error to UI for immediate feedback
+        return {
+            "tasks": [], 
+            "notes": [f"Error: {str(e)} - Check Render Logs for details."]
+        }
 
 @app.get("/history", response_class=HTMLResponse)
 async def get_history(request: Request, session: Session = Depends(get_session)):
-    # Fetch all dumps
     dumps = session.exec(select(MindDump)).all()
-    
-    # FIX: Use the 'context' parameter instead of the second positional argument
     return templates.TemplateResponse(
         request=request, 
         name="history.html", 
